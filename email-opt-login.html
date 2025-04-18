@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login with OTP</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 30px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .login-form input:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        .otp-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .otp-inputs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .otp-inputs input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 20px;
+            margin: 0 5px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4a90e2;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #3a7bc8;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .resend-otp {
+            text-align: center;
+            margin-top: 15px;
+            color: #6c757d;
+        }
+
+        .resend-otp a {
+            color: #4a90e2;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .resend-otp a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 20px;
+            }
+
+            .otp-inputs input {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Login with OTP</h1>
+            <p>Enter your email to receive a one-time password</p>
+        </div>
+
+        <form class="login-form" id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required placeholder="Enter your email">
+            </div>
+
+            <button type="button" id="sendOtpBtn" class="btn">Send OTP</button>
+
+            <div class="otp-container" id="otpContainer">
+                <div class="form-group">
+                    <label>Enter OTP</label>
+                    <div class="otp-inputs">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="1">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="2">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="3">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="4">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="5">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="6">
+                    </div>
+                </div>
+
+                <button type="button" id="verifyOtpBtn" class="btn">Verify OTP</button>
+                <div class="resend-otp">
+                    Didn't receive OTP? <a id="resendOtp">Resend</a>
+                </div>
+            </div>
+
+            <div class="message" id="message"></div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailInput = document.getElementById('email');
+            const sendOtpBtn = document.getElementById('sendOtpBtn');
+            const otpContainer = document.getElementById('otpContainer');
+            const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+            const resendOtp = document.getElementById('resendOtp');
+            const messageDiv = document.getElementById('message');
+            const otpDigits = document.querySelectorAll('.otp-digit');
+
+            let generatedOtp = '';
+            let email = '';
+
+            // Auto focus and move between OTP inputs
+            otpDigits.forEach((digit, index) => {
+                digit.addEventListener('input', function() {
+                    if (this.value.length === 1) {
+                        if (index < otpDigits.length - 1) {
+                            otpDigits[index + 1].focus();
+                        }
+                    }
+                });
+
+                digit.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && this.value.length === 0) {
+                        if (index > 0) {
+                            otpDigits[index - 1].focus();
+                        }
+                    }
+                });
+            });
+
+            // Generate random 6-digit OTP
+            function generateOtp() {
+                return Math.floor(100000 + Math.random() * 900000).toString();
+            }
+
+            // Send OTP to email (simulated)
+            function sendOtp(email) {
+                // In a real application, you would send this to your backend
+                // which would then email the OTP to the user
+                generatedOtp = generateOtp();
+                console.log(`OTP for ${email}: ${generatedOtp}`); // For testing purposes
+                
+                showMessage(`OTP sent to ${email}`, 'success');
+                otpContainer.style.display = 'block';
+            }
+
+            // Show message
+            function showMessage(msg, type) {
+                messageDiv.textContent = msg;
+                messageDiv.className = 'message ' + type;
+                messageDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+
+            // Validate email format
+            function isValidEmail(email) {
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return re.test(email);
+            }
+
+            // Send OTP button click handler
+            sendOtpBtn.addEventListener('click', function() {
+                email = emailInput.value.trim();
+                
+                if (!email) {
+                    showMessage('Please enter your email', 'error');
+                    return;
+                }
+                
+                if (!isValidEmail(email)) {
+                    showMessage('Please enter a valid email address', 'error');
+                    return;
+                }
+                
+                sendOtp(email);
+                sendOtpBtn.disabled = true;
+                sendOtpBtn.textContent = 'OTP Sent';
+                sendOtpBtn.classList.add('btn-secondary');
+            });
+
+            // Resend OTP
+            resendOtp.addEventListener('click', function() {
+                if (!email) {
+                    showMessage('Please enter your email first', 'error');
+                    return;
+                }
+                
+                sendOtp(email);
+                showMessage('OTP resent successfully', 'success');
+                
+                // Clear OTP inputs
+                otpDigits.forEach(digit => {
+                    digit.value = '';
+                });
+                otpDigits[0].focus();
+            });
+
+            // Verify OTP button click handler
+            verifyOtpBtn.addEventListener('click', function() {
+                let enteredOtp = '';
+                otpDigits.forEach(digit => {
+                    enteredOtp += digit.value;
+                });
+                
+                if (enteredOtp.length !== 6) {
+                    showMessage('Please enter the complete 6-digit OTP', 'error');
+                    return;
+                }
+                
+                if (enteredOtp === generatedOtp) {
+                    showMessage('OTP verified successfully! Logging you in...', 'success');
+                    
+                    // In a real application, you would submit the form or redirect
+                    setTimeout(() => {
+                        alert('Login successful! Redirecting to dashboard...');
+                        // window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    showMessage('Invalid OTP. Please try again.', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
